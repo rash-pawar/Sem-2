@@ -4,7 +4,7 @@ int main() {
     int choice, quantity;
     float total = 0.0, price;
 
-    printf("1. Burger - $5.99\n2. Pizza - $8.99\n3. Pasta - $7.49\n4. Salad - $4.99\n5. Soda - $1.49\n6. Exit\n");
+    printf("1. Hakka Noodles - $5.99\n2. Schezwan Fried rice - $8.99\n3. Pasta - $7.49\n4. pizza - $4.99\n5. Burger - $1.49\n6. Exit\n");
 
     while (1) {
         printf("Choose an item (1-6): ");
