@@ -1,0 +1,100 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_SYMBOLS 256
+#define MAX_TEXT 10000
+
+typedef struct {
+    double low;
+    double high;
+} Interval;
+
+unsigned long freq[MAX_SYMBOLS] = {0};
+double probs[MAX_SYMBOLS] = {0.0};
+Interval intervals[MAX_SYMBOLS];
+
+void build_frequency_table(const char *text, int len) {
+    for (int i = 0; i < len; i++) {
+        freq[(unsigned char)text[i]]++;
+    }
+
+    unsigned long total = 0;
+    for (int i = 0; i < MAX_SYMBOLS; i++) total += freq[i];
+    for (int i = 0; i < MAX_SYMBOLS; i++) {
+        if (freq[i] > 0) probs[i] = (double)freq[i] / total;
+    }
+}
+
+void calculate_intervals() {
+    double low = 0.0;
+    for (int i = 0; i < MAX_SYMBOLS; i++) {
+        if (probs[i] > 0.0) {
+            intervals[i].low = low;
+            intervals[i].high = low + probs[i];
+            low += probs[i];
+        }
+    }
+}
+
+double encode(const char *text, int len) {
+    double low = 0.0, high = 1.0;
+    for (int i = 0; i < len; i++) {
+        double range = high - low;
+        unsigned char sym = text[i];
+        high = low + range * intervals[sym].high;
+        low = low + range * intervals[sym].low;
+    }
+    return (low + high) / 2.0;
+}
+
+void decode(double value, int len, char *output) {
+    for (int i = 0; i < len; i++) {
+        for (int j = 0; j < MAX_SYMBOLS; j++) {
+            if (probs[j] > 0.0 && value >= intervals[j].low && value < intervals[j].high) {
+                output[i] = (char)j;
+                double range = intervals[j].high - intervals[j].low;
+                value = (value - intervals[j].low) / range;
+                break;
+            }
+        }
+    }
+    output[len] = '\0';
+}
+
+void encode_file(const char *infile, const char *outfile, const char *decoded_outfile) {
+    FILE *fp = fopen(infile, "r");
+    if (!fp) {
+        perror("Failed to open input file");
+        return;
+    }
+
+    char text[MAX_TEXT];
+    int len = fread(text, sizeof(char), MAX_TEXT, fp);
+    fclose(fp);
+
+    build_frequency_table(text, len);
+    calculate_intervals();
+
+    double encoded_value = encode(text, len);
+
+    fp = fopen(outfile, "w");
+    fprintf(fp, "%.15f\n", encoded_value);
+    fclose(fp);
+
+    // Decode and verify
+    char decoded[MAX_TEXT];
+    decode(encoded_value, len, decoded);
+    fp = fopen(decoded_outfile, "w");
+    fwrite(decoded, sizeof(char), len, fp);
+    fclose(fp);
+
+    printf("Original Length: %d characters\n", len);
+    printf("Encoded value: %.15f\n", encoded_value);
+    printf("Decoded output written to '%s'\n", decoded_outfile);
+}
+
+int main() {
+    encode_file("input.txt", "encoded.txt", "decoded.txt");
+    return 0;
+}
